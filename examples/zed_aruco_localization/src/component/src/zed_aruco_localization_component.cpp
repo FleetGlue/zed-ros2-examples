@@ -18,6 +18,7 @@
 #include <tf2/LinearMath/Transform.h>
 
 #include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 #include <sstream>
 
@@ -50,6 +51,10 @@ using namespace std::placeholders;
 #define RAD2DEG 57.295777937
 #endif
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 namespace stereolabs
 {
 
@@ -65,7 +70,7 @@ ZedArucoLoc::ZedArucoLoc(const rclcpp::NodeOptions & options)
 
   /* Note: it is very important to use a QOS profile for the subscriber that is
    * compatible with the QOS profile of the publisher. The ZED component node
-   * uses a default QoS profile with reliability set as "RELIABLE" and
+   * uses a default QOS profile with reliability set as "RELIABLE" and
    * durability set as "VOLATILE". To be able to receive the subscribed topic
    * the subscriber must use compatible parameters.
    */
@@ -78,6 +83,11 @@ ZedArucoLoc::ZedArucoLoc(const rclcpp::NodeOptions & options)
 
   // Initialize detection time for throttling
   _detTime = get_clock()->now();
+
+  // Initialize pose correction transform to identity
+  _poseCorrection.setIdentity();
+  _hasPoseCorrection = false;
+  _lastCorrectionTime = get_clock()->now();
 
   // Load parameters
   getParams();
@@ -121,7 +131,22 @@ ZedArucoLoc::ZedArucoLoc(const rclcpp::NodeOptions & options)
     get_logger(),
     "Subscribed to topic: " << _subImage.getInfoTopic());
 
-  // Create service caller
+  // Create pose subscriber
+  _subPose = create_subscription<geometry_msgs::msg::PoseStamped>(
+    "/zed/zed_node/pose", _defaultQoS,
+    std::bind(&ZedArucoLoc::pose_callback, this, _1));
+  RCLCPP_INFO_STREAM(
+    get_logger(),
+    "Subscribed to pose topic: " << _subPose->get_topic_name());
+
+  // Create corrected pose publisher
+  _pubCorrectedPose = create_publisher<geometry_msgs::msg::PoseStamped>(
+    "/zed/zed_node/pose_corrected", _defaultQoS);
+  RCLCPP_INFO_STREAM(
+    get_logger(),
+    "Publishing corrected pose on topic: " << _pubCorrectedPose->get_topic_name());
+
+  // Create service caller (commented out but kept for compatibility)
   _setPoseClient = create_client<zed_msgs::srv::SetPose>("set_pose");
 }
 
@@ -278,10 +303,103 @@ void ZedArucoLoc::getMarkerParams()
   }
 }
 
+void ZedArucoLoc::pose_callback(
+  const geometry_msgs::msg::PoseStamped::ConstSharedPtr & msg)
+{
+  // Check for null pointer
+  if (!msg) {
+    RCLCPP_ERROR(get_logger(), "Received null pose message");
+    return;
+  }
+
+  // Create corrected pose message
+  auto corrected_msg = std::make_shared<geometry_msgs::msg::PoseStamped>();
+  *corrected_msg = *msg;  // Copy all fields
+
+  // Apply correction if available
+  if (_hasPoseCorrection) {
+    // Convert pose to tf2::Transform
+    tf2::Transform current_pose;
+    tf2::Vector3 current_origin(
+      msg->pose.position.x,
+      msg->pose.position.y,
+      0.0);  // Force Z to 0 for 2D mode
+    tf2::Quaternion current_rotation(
+      msg->pose.orientation.x,
+      msg->pose.orientation.y,
+      msg->pose.orientation.z,
+      msg->pose.orientation.w);
+    current_pose.setOrigin(current_origin);
+    current_pose.setRotation(current_rotation);
+
+    // Apply correction
+    tf2::Transform corrected_pose;
+    corrected_pose.mult(_poseCorrection, current_pose);
+
+    // Extract yaw from corrected pose (2D rotation)
+    double roll, pitch, yaw;
+    corrected_pose.getBasis().getRPY(roll, pitch, yaw);
+    
+    // Create 2D quaternion (only yaw rotation)
+    tf2::Quaternion corrected_rotation;
+    corrected_rotation.setRPY(0.0, 0.0, yaw);
+
+    // Update message with corrected pose (2D only)
+    corrected_msg->pose.position.x = corrected_pose.getOrigin().x();
+    corrected_msg->pose.position.y = corrected_pose.getOrigin().y();
+    corrected_msg->pose.position.z = 0.0;  // Always 0 for 2D mode
+    
+    corrected_msg->pose.orientation.x = corrected_rotation.x();
+    corrected_msg->pose.orientation.y = corrected_rotation.y();
+    corrected_msg->pose.orientation.z = corrected_rotation.z();
+    corrected_msg->pose.orientation.w = corrected_rotation.w();
+
+    // Optional: Add debug info about correction age
+    double correction_age = (get_clock()->now() - _lastCorrectionTime).nanoseconds() / 1e9;
+    if (_debugActive && correction_age > 10.0) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "Pose correction is %.1f seconds old", correction_age);
+    }
+  } else {
+    // Even without correction, enforce 2D constraints
+    corrected_msg->pose.position.z = 0.0;
+    
+    // Extract and reapply only yaw rotation
+    tf2::Quaternion q(
+      msg->pose.orientation.x,
+      msg->pose.orientation.y,
+      msg->pose.orientation.z,
+      msg->pose.orientation.w);
+    double roll, pitch, yaw;
+    tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+    
+    tf2::Quaternion q_2d;
+    q_2d.setRPY(0.0, 0.0, yaw);
+    
+    corrected_msg->pose.orientation.x = q_2d.x();
+    corrected_msg->pose.orientation.y = q_2d.y();
+    corrected_msg->pose.orientation.z = q_2d.z();
+    corrected_msg->pose.orientation.w = q_2d.w();
+  }
+
+  // Publish corrected pose
+  if (_pubCorrectedPose) {
+    _pubCorrectedPose->publish(*corrected_msg);
+  }
+}
+
 void ZedArucoLoc::camera_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & img,
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & cam_info)
 {
+  // ----> Check for null pointers
+  if (!img || !cam_info) {
+    RCLCPP_ERROR(get_logger(), "Received null image or camera info");
+    return;
+  }
+  // <---- Check for null pointers
+
   // ----> Check for correct input image encoding
   if (img->encoding != sensor_msgs::image_encodings::BGRA8) {
     RCLCPP_ERROR(
@@ -318,47 +436,56 @@ void ZedArucoLoc::camera_callback(
   }
 
   // ----> Convert BGRA image for processing by using OpenCV
-  start = get_clock()->now();
-  void * data =
-    const_cast<void *>(reinterpret_cast<const void *>(&img->data[0]));
-  cv::Mat bgra(img->height, img->width, CV_8UC4, data);
-  cv::Mat bgr, gray;  // bgr is used to publish the detection image, gray for
-                      // ArUco processing
-
-  cv::cvtColor(bgra, gray, cv::COLOR_BGRA2GRAY);
-  cv::cvtColor(bgra, bgr, cv::COLOR_BGRA2BGR);
-
-  elapsed_sec = (get_clock()->now() - start).nanoseconds() / 1e9;
-  if (_debugActive) {
-    RCLCPP_INFO_STREAM(
-      get_logger(),
-      " * Color conversion: " << elapsed_sec << " sec");
-  }
-  // ----> Convert BGRA image for processing by using OpenCV
-
-  // ----> Detect ArUco Markers
-  start = get_clock()->now();
-  std::vector<int> ids;
-  std::vector<std::vector<cv::Point2f>> corners;
-
-  auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_100);
-  cv::aruco::detectMarkers(bgr, dictionary, corners, ids);
-  elapsed_sec = (get_clock()->now() - start).nanoseconds() / 1e9;
-  if (_debugActive) {
-    RCLCPP_INFO_STREAM(
-      get_logger(),
-      " * Marker detection: " << elapsed_sec << " sec");
-  }
-  // <---- Detect ArUco Markers
-
-  if (corners.empty()) {
-    if (_debugActive) {
-      RCLCPP_INFO_STREAM(get_logger(), "  No Markers in view");
-      RCLCPP_INFO_STREAM(get_logger(), "*****************************");
+  try {
+    start = get_clock()->now();
+    
+    // Check image data validity
+    if (img->data.empty()) {
+      RCLCPP_ERROR(get_logger(), "Image data is empty");
+      _detRunning = false;
+      return;
     }
-    _detRunning = false;
-    return;
-  }
+    
+    void * data =
+      const_cast<void *>(reinterpret_cast<const void *>(&img->data[0]));
+    cv::Mat bgra(img->height, img->width, CV_8UC4, data);
+    cv::Mat bgr, gray;  // bgr is used to publish the detection image, gray for
+                        // ArUco processing
+
+    cv::cvtColor(bgra, gray, cv::COLOR_BGRA2GRAY);
+    cv::cvtColor(bgra, bgr, cv::COLOR_BGRA2BGR);
+
+    elapsed_sec = (get_clock()->now() - start).nanoseconds() / 1e9;
+    if (_debugActive) {
+      RCLCPP_INFO_STREAM(
+        get_logger(),
+        " * Color conversion: " << elapsed_sec << " sec");
+    }
+    // <---- Convert BGRA image for processing by using OpenCV
+
+    // ----> Detect ArUco Markers
+    start = get_clock()->now();
+    std::vector<int> ids;
+    std::vector<std::vector<cv::Point2f>> corners;
+
+    auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_100);
+    cv::aruco::detectMarkers(bgr, dictionary, corners, ids);
+    elapsed_sec = (get_clock()->now() - start).nanoseconds() / 1e9;
+    if (_debugActive) {
+      RCLCPP_INFO_STREAM(
+        get_logger(),
+        " * Marker detection: " << elapsed_sec << " sec");
+    }
+    // <---- Detect ArUco Markers
+
+    if (corners.empty() || ids.empty()) {
+      if (_debugActive) {
+        RCLCPP_INFO_STREAM(get_logger(), "  No Markers in view");
+        RCLCPP_INFO_STREAM(get_logger(), "*****************************");
+      }
+      _detRunning = false;
+      return;
+    }
 
   if (_debugActive) {
     RCLCPP_INFO_STREAM(get_logger(), " * Detected tags: " << ids.size());
@@ -570,9 +697,71 @@ void ZedArucoLoc::camera_callback(
   map_pose.mult(marker_world_pose, base_pose_marker);
   // <---- New camera pose in ROS world
 
-  // ----> Reset camera position
-  resetZedPose(map_pose);
-  // <---- Reset camera position
+  // ----> Calculate and store pose correction
+  // Get current pose from TF
+  tf2::Transform current_pose;
+  if (getTransformFromTf(_worldFrameId, _cameraName + "_camera_link", current_pose)) {
+    // For 2D mode, we need to constrain the correction to X, Y, and yaw
+    // First, extract 2D components from both poses
+    double current_roll, current_pitch, current_yaw;
+    double desired_roll, desired_pitch, desired_yaw;
+    tf2::Matrix3x3(current_pose.getRotation()).getRPY(current_roll, current_pitch, current_yaw);
+    tf2::Matrix3x3(map_pose.getRotation()).getRPY(desired_roll, desired_pitch, desired_yaw);
+    
+    // Create 2D versions of the transforms
+    tf2::Transform current_2d, desired_2d;
+    
+    // Current pose in 2D
+    current_2d.setOrigin(tf2::Vector3(current_pose.getOrigin().x(), 
+                                      current_pose.getOrigin().y(), 
+                                      0.0));
+    tf2::Quaternion current_q_2d;
+    current_q_2d.setRPY(0.0, 0.0, current_yaw);
+    current_2d.setRotation(current_q_2d);
+    
+    // Desired pose in 2D
+    desired_2d.setOrigin(tf2::Vector3(map_pose.getOrigin().x(), 
+                                      map_pose.getOrigin().y(), 
+                                      0.0));
+    tf2::Quaternion desired_q_2d;
+    desired_q_2d.setRPY(0.0, 0.0, desired_yaw);
+    desired_2d.setRotation(desired_q_2d);
+    
+    // Calculate correction transform: correction = desired * current^-1
+    _poseCorrection.mult(desired_2d, current_2d.inverse());
+    _hasPoseCorrection = true;
+    _lastCorrectionTime = get_clock()->now();
+    
+    if (_debugActive) {
+      double cx, cy, cz;
+      _poseCorrection.getBasis().getRPY(cx, cy, cz);
+      
+      // Calculate the rotation offset for clarity
+      double yaw_offset = desired_yaw - current_yaw;
+      // Normalize to [-PI, PI]
+      while (yaw_offset > M_PI) yaw_offset -= 2.0 * M_PI;
+      while (yaw_offset < -M_PI) yaw_offset += 2.0 * M_PI;
+      
+      RCLCPP_INFO(
+        get_logger(),
+        "2D Pose correction -> Pos: [%.3f,%.3f,0.0] - Yaw: %.3f° (offset: %.3f°)",
+        _poseCorrection.getOrigin().x(), _poseCorrection.getOrigin().y(), 
+        cz * RAD2DEG, yaw_offset * RAD2DEG);
+      RCLCPP_INFO(
+        get_logger(),
+        "  Current pose: [%.3f,%.3f] yaw=%.3f° -> Desired: [%.3f,%.3f] yaw=%.3f°",
+        current_pose.getOrigin().x(), current_pose.getOrigin().y(), current_yaw * RAD2DEG,
+        map_pose.getOrigin().x(), map_pose.getOrigin().y(), desired_yaw * RAD2DEG);
+    }
+  } else {
+    RCLCPP_WARN(get_logger(), "Could not get current pose from TF for correction calculation");
+  }
+  // <---- Calculate and store pose correction
+
+  // ----> Reset camera position (COMMENTED OUT)
+  // RCLCPP_INFO(get_logger(), "*** set_pose service call is disabled ***");
+  // resetZedPose(map_pose);
+  // <---- Reset camera position (COMMENTED OUT)
 
   // ----> Debug TF
   if (_debugActive) {
@@ -676,6 +865,16 @@ void ZedArucoLoc::camera_callback(
 
   // Detection completed and camera relocated
   _detRunning = false;
+  
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(get_logger(), "Exception in camera callback: %s", e.what());
+    _detRunning = false;
+    return;
+  } catch (...) {
+    RCLCPP_ERROR(get_logger(), "Unknown exception in camera callback");
+    _detRunning = false;
+    return;
+  }
 }
 
 void ZedArucoLoc::broadcastMarkerTFs()
@@ -806,6 +1005,8 @@ void ZedArucoLoc::initTFs()
 
 bool ZedArucoLoc::resetZedPose(tf2::Transform & new_pose)
 {
+  // COMMENTED OUT - Service call disabled
+  /*
   RCLCPP_INFO(get_logger(), "*** Calling ZED 'set_pose' service ***");
 
   auto request = std::make_shared<zed_msgs::srv::SetPose::Request>();
@@ -854,7 +1055,9 @@ bool ZedArucoLoc::resetZedPose(tf2::Transform & new_pose)
 
   auto future_result =
     _setPoseClient->async_send_request(request, response_received_callback);
-
+  */
+  
+  RCLCPP_INFO(get_logger(), "*** set_pose service call is disabled ***");
   return true;
 }
 

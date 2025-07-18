@@ -29,6 +29,7 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <zed_msgs/srv/set_pose.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include "aruco_loc_visibility_control.hpp"
 
@@ -56,6 +57,9 @@ protected:
     const sensor_msgs::msg::Image::ConstSharedPtr & img,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr & cam_info);
 
+  void pose_callback(
+    const geometry_msgs::msg::PoseStamped::ConstSharedPtr & msg);
+
   template<typename T>
   void getParam(
     std::string paramName, T defValue, T & outVal,
@@ -77,7 +81,11 @@ private:
   // ----> ROS Messages
   image_transport::CameraPublisher
     _pubDetect;    // Publisher for detection results
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr 
+    _pubCorrectedPose;  // Publisher for corrected pose
   image_transport::CameraSubscriber _subImage;  // ZED Image subscriber
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr 
+    _subPose;  // ZED Pose subscriber
   rclcpp::QoS _defaultQoS;                      // QoS parameters
   // <---- ROS Messages
 
@@ -117,6 +125,12 @@ private:
 
   rclcpp::TimerBase::SharedPtr _tfTimer;  // Timer to broadcast marker TFs
   // <---- TF2
+
+  // ----> Pose correction
+  tf2::Transform _poseCorrection;  // Correction transform to apply to poses
+  bool _hasPoseCorrection;         // Flag indicating if correction is available
+  rclcpp::Time _lastCorrectionTime;  // Time when last correction was calculated
+  // <---- Pose correction
 };
 
 }  // namespace stereolabs
