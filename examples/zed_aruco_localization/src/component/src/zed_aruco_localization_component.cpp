@@ -19,6 +19,7 @@
 
 #include <geometry_msgs/msg/pose.hpp>
 #include <sensor_msgs/image_encodings.hpp>
+#include <std_msgs/msg/u_int32.hpp>
 #include <sstream>
 
 #include "aruco.hpp"
@@ -65,7 +66,7 @@ ZedArucoLoc::ZedArucoLoc(const rclcpp::NodeOptions & options)
 
   /* Note: it is very important to use a QOS profile for the subscriber that is
    * compatible with the QOS profile of the publisher. The ZED component node
-   * uses a default QoS profile with reliability set as "RELIABLE" and
+   * uses a default QOS profile with reliability set as "RELIABLE" and
    * durability set as "VOLATILE". To be able to receive the subscribed topic
    * the subscriber must use compatible parameters.
    */
@@ -107,6 +108,12 @@ ZedArucoLoc::ZedArucoLoc(const rclcpp::NodeOptions & options)
   RCLCPP_INFO_STREAM(
     get_logger(),
     "Advertised on topic: " << _pubDetect.getInfoTopic());
+
+  // Create count publisher
+  _pubCount = create_publisher<std_msgs::msg::UInt32>("/zed/aruco/count", _defaultQoS);
+  RCLCPP_INFO_STREAM(
+    get_logger(),
+    "Advertised on topic: " << _pubCount->get_topic_name());
 
   // Create camera image subscriber
   _subImage = image_transport::create_camera_subscription(
@@ -573,6 +580,15 @@ void ZedArucoLoc::camera_callback(
   // ----> Reset camera position
   resetZedPose(map_pose);
   // <---- Reset camera position
+
+  // ----> Increment and publish ArUco count
+  _arucoCount++;
+  auto count_msg = std_msgs::msg::UInt32();
+  count_msg.data = _arucoCount;
+  _pubCount->publish(count_msg);
+  RCLCPP_INFO_STREAM(
+    get_logger(), " * ArUco markers seen so far: " << _arucoCount);
+  // <---- Increment and publish ArUco count
 
   // ----> Debug TF
   if (_debugActive) {
