@@ -115,6 +115,15 @@ ZedArucoLoc::ZedArucoLoc(const rclcpp::NodeOptions & options)
     get_logger(),
     "Advertised on topic: " << _pubCount->get_topic_name());
 
+  // Initialize ArUco count to 0
+  _arucoCount = 0;
+  
+  // Publish initial count of 0 to ensure any latched previous count is overwritten
+  auto initial_count_msg = std_msgs::msg::UInt32();
+  initial_count_msg.data = _arucoCount;
+  _pubCount->publish(initial_count_msg);
+  RCLCPP_INFO(get_logger(), "Published initial ArUco count: 0");
+
   // Create camera image subscriber
   _subImage = image_transport::create_camera_subscription(
     this, "in/zed_image",
