@@ -28,6 +28,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
+#include <std_msgs/msg/u_int32.hpp>  // Added for count publisher
 #include <zed_msgs/srv/set_pose.hpp>
 
 #include "aruco_loc_visibility_control.hpp"
@@ -78,6 +79,7 @@ private:
   image_transport::CameraPublisher
     _pubDetect;    // Publisher for detection results
   image_transport::CameraSubscriber _subImage;  // ZED Image subscriber
+  rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _pubCount;  // Publisher for ArUco count
   rclcpp::QoS _defaultQoS;                      // QoS parameters
   // <---- ROS Messages
 
@@ -88,6 +90,7 @@ private:
   rclcpp::Time _detTime;  // Time of the latest detection
   std::atomic<bool>
   _detRunning;      // Flag used to not perform cuncurrent detections
+  uint32_t _arucoCount = 0;  // Counter for ArUco markers seen
   // <---- Running variables
 
   // ----> Parameters
