@@ -39,7 +39,7 @@
         min_marker_area: 1500.0        # ~39x39 px minimum. 0.762m marker at 7.5m ≈ 67px side.
 
       debug:
-        active: true               # Enable debug messages
+        active: false               # Enable debug messages
 
       marker_000:
         aruco_id: 4
