@@ -28,7 +28,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <std_msgs/msg/u_int32.hpp>  // Added for count publisher
+#include <std_msgs/msg/u_int32.hpp>
 #include <zed_msgs/srv/set_pose.hpp>
 
 #include "aruco_loc_visibility_control.hpp"
@@ -65,6 +65,8 @@ protected:
   void getParams();
   void getGeneralParams();
   void getMarkerParams();
+  void getQualityFilterParams();
+  void applyResolutionParams(int image_width, int image_height);
 
   void initTFs();
   void broadcastMarkerTFs();
@@ -76,36 +78,60 @@ protected:
 
 private:
   // ----> ROS Messages
-  image_transport::CameraPublisher
-    _pubDetect;    // Publisher for detection results
-  image_transport::CameraSubscriber _subImage;  // ZED Image subscriber
-  rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _pubCount;  // Publisher for ArUco count
-  rclcpp::QoS _defaultQoS;                      // QoS parameters
+  image_transport::CameraPublisher _pubDetect;
+  image_transport::CameraSubscriber _subImage;
+  rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr _pubCount;
+  rclcpp::QoS _defaultQoS;
   // <---- ROS Messages
 
   // Service client
   rclcpp::Client<zed_msgs::srv::SetPose>::SharedPtr _setPoseClient;
 
   // ----> Running variables
-  rclcpp::Time _detTime;  // Time of the latest detection
-  std::atomic<bool>
-  _detRunning;      // Flag used to not perform cuncurrent detections
-  uint32_t _arucoCount = 0;  // Counter for ArUco markers seen
+  rclcpp::Time _detTime;
+  std::atomic<bool> _detRunning;
+  uint32_t _arucoCount = 0;
   // <---- Running variables
 
-  // ----> Parameters
-  int _markerCount = 1;       // Number of markers available in the environment
-  float _markerSize = 0.16f;  // Size of the tags [m]
-  float _detRate = 1.0f;      // Maximum detection frequency for pose update
-  std::string _worldFrameId;  // World frame id
-  std::string _cameraName = "zed";  // Name of the camera to be re-localized
-  double _maxDist;                  // Maximum distance from the camera
-  bool
-    _refineDetection;    // Enable sub-pixel refinement for the detected corners
-  std::map<int, ArucoPose>
-  _tagPoses;      // Pose of each tag in the environment in World coordinates
-  bool _debugActive;  // Enable debug messages
-  // <---- Parameters
+  // ----> General Parameters
+  int _markerCount = 1;
+  float _markerSize = 0.16f;
+  float _detRate = 1.0f;
+  std::string _worldFrameId;
+  std::string _cameraName = "zed";
+  double _maxDist;
+  bool _refineDetection;
+  std::map<int, ArucoPose> _tagPoses;
+  bool _debugActive;
+  // <---- General Parameters
+
+  // ----> Quality Filter Parameters (shared, resolution-independent)
+  double _maxObliqueAngle = 65.0;
+  double _sameMarkerCooldown = 5.0;
+
+  // Resolution-dependent params (set by applyResolutionParams on first frame)
+  double _minLaplacianVariance = 50.0;
+  double _maxReprojError = 2.0;
+  double _minMarkerArea = 2500.0;
+
+  // Stored from YAML for both resolutions
+  double _minLaplacianVariance_1080 = 50.0;
+  double _maxReprojError_1080 = 2.0;
+  double _minMarkerArea_1080 = 2500.0;
+  double _minLaplacianVariance_720 = 40.0;
+  double _maxReprojError_720 = 1.5;
+  double _minMarkerArea_720 = 1500.0;
+
+  bool _resolutionDetected = false;
+  // <---- Quality Filter Parameters
+
+  // ----> Per-marker reset tracking (same-marker suppression)
+  struct MarkerResetInfo {
+    double reproj_error;    // reproj error at last accepted reset
+    rclcpp::Time timestamp; // time of last accepted reset
+  };
+  std::map<int, MarkerResetInfo> _lastResetInfo;
+  // <---- Per-marker reset tracking
 
   // ----> TF2
   std::unique_ptr<tf2_ros::Buffer> _tfBuffer;
@@ -118,7 +144,7 @@ private:
   tf2::Transform _img2ros;
   tf2::Transform _left2base;
 
-  rclcpp::TimerBase::SharedPtr _tfTimer;  // Timer to broadcast marker TFs
+  rclcpp::TimerBase::SharedPtr _tfTimer;
   // <---- TF2
 };
 

@@ -8,116 +8,125 @@
       general:
         marker_count: 18             # Number of markers in the World
         marker_size: 0.762           # Width/Height of the ArUco markers [m]
-        maximum_distance: 7.5       # Maximum distance of the target from the camera to consider it valid
-        detection_rate: 1.0         # Maximum detection frequency for pose update
-        camera_name: 'zed'          # Name of the camera to relocate
-        world_frame_id: 'map'       # Frame id of the world frame
-        refine_detection: false     # If enabled the corners of the detected markers will be processed to obtain sub-pixel precision
+        maximum_distance: 10.0        # Maximum distance of the target from the camera to consider it valid
+        detection_rate: 1.0          # Maximum detection frequency for pose update
+        camera_name: 'zed'           # Name of the camera to relocate
+        world_frame_id: 'map'        # Frame id of the world frame
+        refine_detection: false      # Keep false - subpixel refinement degrades results with motion blur
+
+      # Quality filters to reject blurry, oblique, or poorly estimated detections.
+      # Resolution is auto-detected from the image; the matching param set is selected automatically.
+      # Shared params (resolution-independent):
+      quality_filters:
+        max_oblique_angle: 65.0        # Maximum viewing angle in degrees between marker normal and camera axis.
+                                       # Beyond ~65 deg the marker is heavily foreshortened and corner
+                                       # localization degrades. Increase to 70 if too aggressive.
+        same_marker_cooldown: 5.0      # Cooldown in seconds before re-accepting the same marker for
+                                       # pose reset, unless the new detection has a strictly better
+                                       # (lower) reprojection error. A different marker is always
+                                       # accepted immediately regardless of this cooldown.
+
+      # HD1080 (1920x1080) — more pixels per marker, can afford slightly looser thresholds
+      quality_filters_1080:
+        min_laplacian_variance: 50.0   # Sharp markers typically 100-500+. Blurry drops below 30-50.
+        max_reprojection_error: 2.0    # Good detections < 1.0 px. Above 2.0 = bad corners.
+        min_marker_area: 2500.0        # ~50x50 px minimum. 0.762m marker at 7.5m ≈ 100px side.
+
+      # HD720 (1280x720) — fewer pixels, tighter error budget, lower area threshold
+      quality_filters_720:
+        min_laplacian_variance: 40.0   # Slightly lower — smaller ROI has inherently less variance.
+        max_reprojection_error: 1.5    # Each pixel = larger angular error at lower res, so tighter.
+        min_marker_area: 1500.0        # ~39x39 px minimum. 0.762m marker at 7.5m ≈ 67px side.
 
       debug:
-        active: false               # Enable debug messages
+        active: true               # Enable debug messages
 
       marker_000:
-        aruco_id: 4                 # ID of the ArUco tag as retrieved by the ArUco Detector code (Anchor Marker) (Garage door)
-        position: [94.45,-80.06,0.0] # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,1.5708]   # Orientation with respect to the World origin [rad]
-        
-#      marker_001:
-#        aruco_id: 5                 # ID of the ArUco tag as retrieved by the ArUco Detector code (n office)
-#        position: [102.11,-1.36,0.0] # Pose with respect to the World origin [m] some dist in pos Y
-#        orientation: [0.0,0.0,3.14158]   # Orientation with respect to the World origin [rad]
-
+        aruco_id: 4
+        position: [94.45,-80.06,0.0]
+        orientation: [0.0,0.0,1.5708]
 
       marker_001:
-        aruco_id: 23                 # ID of the ArUco tag as retrieved by the ArUco Detector code C3
-        position: [25.66,-47.32,0.0]     # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,0]   # Orientation with respect to the World origin [rad]
+        aruco_id: 23
+        position: [25.66,-47.32,0.0]
+        orientation: [0.0,0.0,0]
 
       marker_002:
-        aruco_id: 8                 # ID of the ArUco tag as retrieved by the ArUco Detector code C9
-        position: [97.81,-48.44,0.0]     # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,3.14158]   # Orientation with respect to the World origin [rad]
+        aruco_id: 8
+        position: [97.81,-48.44,0.0]
+        orientation: [0.0,0.0,3.14158]
 
       marker_003:
-        aruco_id: 12                 # ID of the ArUco tag as retrieved by the ArUco Detector code C7
-        position: [72.9,-48.59,0.0]     # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,3.14158]   # Orientation with respect to the World origin [rad]
+        aruco_id: 12
+        position: [72.9,-48.59,0.0]
+        orientation: [0.0,0.0,3.14158]
 
       marker_004:
-        aruco_id: 6                 # ID of the ArUco tag as retrieved by the ArUco Detector code across B9 on racks
-        position: [92.89,-29.8,0.0]     # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,-1.57]   # Orientation with respect to the World origin [rad]
+        aruco_id: 6
+        position: [92.89,-29.8,0.0]
+        orientation: [0.0,0.0,-1.57]
 
       marker_005:
-        aruco_id: 25                 # ID of the ArUco tag as retrieved by the ArUco Detector code (Anchor Marker) (Asile 1 woodshop)
-        position: [103.46,-195.38,0.0] # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,1.5708]   # Orientation with respect to the World origin [rad]
+        aruco_id: 25
+        position: [103.46,-195.38,0.0]
+        orientation: [0.0,0.0,1.5708]
 
       marker_006:
-        aruco_id: 7                 # ID of the ArUco tag as retrieved by the ArUco Detector code (Anchor Marker) (Asile 2 woodshop)
-        position: [109.06,-195.38,0.0] # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,1.5708]   # Orientation with respect to the World origin [rad]
-
+        aruco_id: 7
+        position: [109.06,-195.38,0.0]
+        orientation: [0.0,0.0,1.5708]
 
       marker_007:
-        aruco_id: 9                 # ID of the ArUco tag as retrieved by the ArUco Detector code (Anchor Marker) (Asile 2 perp woodshop)
-        position: [112.98,-202.00,0.0] # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,0.0]   # Orientation with respect to the World origin [rad]
+        aruco_id: 9
+        position: [112.98,-202.00,0.0]
+        orientation: [0.0,0.0,0.0]
 
       marker_008:
-        aruco_id: 10                 # ID of the ArUco tag as retrieved by the ArUco Detector code (Anchor Marker) (Asile 2 perp woodshop)
-        position: [175.11,-201.06,0.0] # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,3.14158]   # Orientation with respect to the World origin [rad]
-        
-      marker_009:
-        aruco_id: 3                 # ID of the ArUco tag as retrieved by the ArUco Detector code (Anchor Marker) (Asile 2 perp woodshop)
-        position: [94.45,-80.06,0.0] # Pose with respect to the World origin [m]
-        orientation: [0.0,0.0,-1.57]   # Orientation with respect to the World origin [rad]
+        aruco_id: 10
+        position: [175.11,-201.06,0.0]
+        orientation: [0.0,0.0,3.14158]
 
-      marker_010:                        # Norm's office
+      marker_009:
+        aruco_id: 3
+        position: [94.45,-80.06,0.0]
+        orientation: [0.0,0.0,-1.57]
+
+      marker_010:
         aruco_id: 5
         position: [102.94,-2.64,0.0]
         orientation: [0.0,0.0,3.14158]
 
-      marker_011:                         #opp Norm's office
+      marker_011:
         aruco_id: 22
         position: [48.7,-4.17,0.0]
         orientation: [0.0,0.0,0.0]
 
-      marker_012:                        # above garage door
+      marker_012:
         aruco_id: 11
         position: [104.77,-98.7,0.0]
         orientation: [0.0,0.0,-1.5708]
 
-      marker_013:                         # C5 looking at C3
+      marker_013:
         aruco_id: 13
         position: [49.39,-48.98,0.0]
         orientation: [0.0,0.0,3.14158]
 
       marker_014:
-        aruco_id: 17                      #C5 looking at C9
+        aruco_id: 17
         position: [50.19,-48.98,0.0]
         orientation: [0.0,0.0,0.0]
 
       marker_015:
-        aruco_id: 18                       # C7 looking C9
+        aruco_id: 18
         position: [73.86,-48.59,0.0]
         orientation: [0.0,0.0,0.0]
 
-      marker_016:                             #oppodite garage door and maintainance door
+      marker_016:
         aruco_id: 16
         position: [98.56,-107.56,0.0]
         orientation: [0.0,0.0,1.5708]
 
-      marker_017:                             #B9
+      marker_017:
         aruco_id: 24
         position: [98.34,-35.55,0.0]
         orientation: [0.0,0.0,1.5708]
-       
-
-      # Add a number of marker definitions equal to the number of markers in the World according to the `marker_count` value
-      
-      #marker_xxx:
-      #  aruco_id: YYY               # ID of the ArUco tag as retrieved by the ArUco Detector code
-      #  position: [x.x,y.y,z.z]     # Pose with respect to the World origin [m]
-      #  orientation: [R.R,P.P,Y.Y]  # Orientation with respect to the World origin [rad]
