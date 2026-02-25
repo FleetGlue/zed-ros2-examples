@@ -130,6 +130,48 @@ double reprojectionError(
   return std::sqrt(sum_sq / 4.0);
 }
 
+// =========================================================================
+// Perimeter polygon definition and point-in-polygon test (ray-casting)
+// =========================================================================
+
+// The "peri" region vertices (X, Y) from the Python script.
+// The polygon is implicitly closed (last vertex connects back to first).
+static const std::vector<std::pair<double, double>> kPerimeterPolygon = {
+  {172.64,    1.96},
+  {  0.04,    0.01},
+  {  0.94,  -81.24},
+  { 81.03,  -80.12},
+  { 81.39, -110.34},
+  { 99.47, -109.80},
+  { 99.55, -195.47},
+  {112.81, -195.32},
+  {112.95, -207.78},
+  {175.24, -207.12},
+};
+
+// Ray-casting algorithm: cast a ray from (px, py) in the +X direction and
+// count how many polygon edges it crosses.  Odd count => inside.
+bool isInsidePerimeter(double px, double py)
+{
+  const size_t n = kPerimeterPolygon.size();
+  bool inside = false;
+
+  for (size_t i = 0, j = n - 1; i < n; j = i++) {
+    double yi = kPerimeterPolygon[i].second;
+    double yj = kPerimeterPolygon[j].second;
+    double xi = kPerimeterPolygon[i].first;
+    double xj = kPerimeterPolygon[j].first;
+
+    // Check if the ray at height py crosses edge (i, j)
+    if (((yi > py) != (yj > py)) &&
+        (px < (xj - xi) * (py - yi) / (yj - yi) + xi))
+    {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 }  // anonymous namespace
 
 namespace stereolabs
@@ -659,6 +701,22 @@ void ZedArucoLoc::camera_callback(
   tf2::Transform map_pose;
   map_pose.mult(marker_world_pose, base_pose_marker);
   // <---- New camera pose
+
+  // =====================================================================
+  // Perimeter check: warn if the accepted pose is outside the defined area
+  // (always printed, regardless of debug mode)
+  // =====================================================================
+  {
+    double pose_x = map_pose.getOrigin().x();
+    double pose_y = map_pose.getOrigin().y();
+    if (!isInsidePerimeter(pose_x, pose_y)) {
+      RCLCPP_WARN(
+        get_logger(),
+        "PERIMETER VIOLATION: ArUco #%d produced pose OUTSIDE defined area | "
+        "pose=[%.2f, %.2f, %.2f]",
+        sel_id, pose_x, pose_y, map_pose.getOrigin().z());
+    }
+  }
 
   // ----> Reset camera position
   resetZedPose(map_pose);
