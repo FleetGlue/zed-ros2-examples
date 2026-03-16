@@ -41,92 +41,92 @@
       debug:
         active: false               # Enable debug messages
 
-      marker_000:
+      marker_000:                        # Garage door
         aruco_id: 4
         position: [94.45,-80.06,0.0]
         orientation: [0.0,0.0,1.5708]
 
-      marker_001:
+      marker_001:                        # C3
         aruco_id: 23
         position: [25.66,-47.32,0.0]
         orientation: [0.0,0.0,0]
 
-      marker_002:
+      marker_002:                        # C9
         aruco_id: 8
         position: [97.81,-48.44,0.0]
         orientation: [0.0,0.0,3.14158]
 
-      marker_003:
+      marker_003:                        # C7
         aruco_id: 12
         position: [72.9,-48.59,0.0]
         orientation: [0.0,0.0,3.14158]
 
-      marker_004:
+      marker_004:                        # Across B9 on racks
         aruco_id: 6
         position: [92.89,-29.8,0.0]
         orientation: [0.0,0.0,-1.57]
 
-      marker_005:
+      marker_005:                        # Aisle 1 woodshop
         aruco_id: 25
         position: [103.46,-195.38,0.0]
         orientation: [0.0,0.0,1.5708]
 
-      marker_006:
+      marker_006:                        # Aisle 2 woodshop
         aruco_id: 7
         position: [109.06,-195.38,0.0]
         orientation: [0.0,0.0,1.5708]
 
-      marker_007:
+      marker_007:                        # Aisle 2 perp woodshop
         aruco_id: 9
         position: [112.98,-202.00,0.0]
         orientation: [0.0,0.0,0.0]
 
-      marker_008:
+      marker_008:                        # Aisle 2 perp woodshop
         aruco_id: 10
         position: [175.11,-201.06,0.0]
         orientation: [0.0,0.0,3.14158]
 
-      marker_009:
+      marker_009:                        # Garage door (perpendicular)
         aruco_id: 3
         position: [94.45,-80.06,0.0]
         orientation: [0.0,0.0,-1.57]
 
-      marker_010:
+      marker_010:                        # Norm's office
         aruco_id: 5
         position: [102.94,-2.64,0.0]
         orientation: [0.0,0.0,3.14158]
 
-      marker_011:
+      marker_011:                        # Opp Norm's office
         aruco_id: 22
         position: [48.7,-4.17,0.0]
         orientation: [0.0,0.0,0.0]
 
-      marker_012:
+      marker_012:                        # Above  maintenance door
         aruco_id: 11
         position: [104.77,-98.7,0.0]
         orientation: [0.0,0.0,-1.5708]
 
-      marker_013:
+      marker_013:                        # C5 looking at C3
         aruco_id: 13
         position: [49.39,-48.98,0.0]
         orientation: [0.0,0.0,3.14158]
 
-      marker_014:
+      marker_014:                        # C5 looking at C9
         aruco_id: 17
         position: [50.19,-48.98,0.0]
         orientation: [0.0,0.0,0.0]
 
-      marker_015:
+      marker_015:                        # C7 looking C9
         aruco_id: 18
         position: [73.86,-48.59,0.0]
         orientation: [0.0,0.0,0.0]
 
-      marker_016:
+      marker_016:                        # Opposite garage door and maintenance door
         aruco_id: 16
         position: [98.56,-107.56,0.0]
         orientation: [0.0,0.0,1.5708]
 
-      marker_017:
+      marker_017:                        # B9
         aruco_id: 24
         position: [98.34,-35.55,0.0]
         orientation: [0.0,0.0,1.5708]
