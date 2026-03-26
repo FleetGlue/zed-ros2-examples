@@ -6,10 +6,10 @@
     ros__parameters:
 
       general:
-        marker_count: 18             # Number of markers in the World
+        marker_count: 24             # Number of markers in the World
         marker_size: 0.762           # Width/Height of the ArUco markers [m]
         maximum_distance: 10.0        # Maximum distance of the target from the camera to consider it valid
-        detection_rate: 1.0          # Maximum detection frequency for pose update
+        detection_rate: 2.0          # Maximum detection frequency for pose update
         camera_name: 'zed'           # Name of the camera to relocate
         world_frame_id: 'map'        # Frame id of the world frame
         refine_detection: false      # Keep false - subpixel refinement degrades results with motion blur
@@ -43,57 +43,57 @@
 
       marker_000:                        # Garage door
         aruco_id: 4
-        position: [94.45,-80.06,0.0]
+        position: [94.03,-80.07,2.84]
         orientation: [0.0,0.0,1.5708]
 
       marker_001:                        # C3
         aruco_id: 23
-        position: [25.66,-47.32,0.0]
+        position: [25.66,-47.32,3.358]
         orientation: [0.0,0.0,0]
 
       marker_002:                        # C9
-        aruco_id: 8
-        position: [97.81,-48.44,0.0]
+        aruco_id: 34
+        position: [97.81,-48.44,3.06]
         orientation: [0.0,0.0,3.14158]
 
       marker_003:                        # C7
         aruco_id: 12
-        position: [72.9,-48.59,0.0]
+        position: [72.9,-48.59,3.72]
         orientation: [0.0,0.0,3.14158]
 
       marker_004:                        # Across B9 on racks
         aruco_id: 6
-        position: [92.89,-29.8,0.0]
+        position: [92.89,-29.8,3.72]
         orientation: [0.0,0.0,-1.57]
 
       marker_005:                        # Aisle 1 woodshop
         aruco_id: 25
-        position: [103.46,-195.38,0.0]
+        position: [103.46,-195.38,2.74]
         orientation: [0.0,0.0,1.5708]
 
       marker_006:                        # Aisle 2 woodshop
         aruco_id: 7
-        position: [109.06,-195.38,0.0]
+        position: [109.06,-195.38,2.76]
         orientation: [0.0,0.0,1.5708]
 
       marker_007:                        # Aisle 2 perp woodshop
         aruco_id: 9
-        position: [112.98,-202.00,0.0]
+        position: [112.94,-202.95,0.0]
         orientation: [0.0,0.0,0.0]
 
-      marker_008:                        # Aisle 2 perp woodshop
+      marker_008:                        # woodshop corner marker near material co ordination
         aruco_id: 10
-        position: [175.11,-201.06,0.0]
+        position: [174.96,-201.51,2.858]
         orientation: [0.0,0.0,3.14158]
 
       marker_009:                        # Garage door (perpendicular)
         aruco_id: 3
-        position: [94.45,-80.06,0.0]
+        position: [93.94,-80.07,2.84]
         orientation: [0.0,0.0,-1.57]
 
       marker_010:                        # Norm's office
         aruco_id: 5
-        position: [102.94,-2.64,0.0]
+        position: [102.94,-2.64,3.42]
         orientation: [0.0,0.0,3.14158]
 
       marker_011:                        # Opp Norm's office
@@ -103,22 +103,22 @@
 
       marker_012:                        # Above  maintenance door
         aruco_id: 11
-        position: [104.77,-98.7,0.0]
+        position: [104.94,-98.69,2.85]
         orientation: [0.0,0.0,-1.5708]
 
       marker_013:                        # C5 looking at C3
         aruco_id: 13
-        position: [49.39,-48.98,0.0]
+        position: [49.39,-48.98,3.66]
         orientation: [0.0,0.0,3.14158]
 
       marker_014:                        # C5 looking at C9
         aruco_id: 17
-        position: [50.19,-48.98,0.0]
+        position: [50.19,-48.98,3.66]
         orientation: [0.0,0.0,0.0]
 
       marker_015:                        # C7 looking C9
         aruco_id: 18
-        position: [73.86,-48.59,0.0]
+        position: [73.86,-48.59,3.72]
         orientation: [0.0,0.0,0.0]
 
       marker_016:                        # Opposite garage door and maintenance door
@@ -128,5 +128,39 @@
 
       marker_017:                        # B9
         aruco_id: 24
-        position: [98.34,-35.55,0.0]
+        position: [98.34,-35.55,3.13]
         orientation: [0.0,0.0,1.5708]
+
+      marker_018:                             #near MC studio computer
+        aruco_id: 33
+        position: [174.88,-191.854,2.887]
+        orientation: [0.0,0.0,3.14158]
+
+      marker_019:                             #HS11 begnning of woodshop aisles
+        aruco_id: 8
+        position: [125.32,-109.98,2.9]
+        orientation: [0.0,0.0,0.0]
+
+
+      marker_020:                             # 5th asile woodshop
+        aruco_id: 30
+        position: [129.704,-207.64,2.98]
+        orientation: [0.0,0.0,1.5708]
+
+      marker_021:                             #opposite to MC studio computer
+        aruco_id: 36
+        position: [150.53,-195.12,2.838]
+        orientation: [0.0,0.0,0.0]
+
+
+      marker_022:                             # WoodShop racks
+        aruco_id: 31
+        position: [131.64,-146.25,2.9]
+        orientation: [0.0,0.0,1.5708]
+
+      marker_023:                             # WoodShop racks opposite on pillar
+        aruco_id: 32
+        position: [125.74,-146.86,2.9]
+        orientation: [0.0,0.0,-1.57]
+
+
