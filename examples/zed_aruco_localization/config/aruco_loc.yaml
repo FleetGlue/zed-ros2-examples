@@ -18,7 +18,7 @@
       # Resolution is auto-detected from the image; the matching param set is selected automatically.
       # Shared params (resolution-independent):
       quality_filters:
-        max_oblique_angle: 65.0        # Maximum viewing angle in degrees between marker normal and camera axis.
+        max_oblique_angle: 130.0        # Maximum viewing angle in degrees between marker normal and camera axis.
                                        # Beyond ~65 deg the marker is heavily foreshortened and corner
                                        # localization degrades. Increase to 70 if too aggressive.
         same_marker_cooldown: 5.0      # Cooldown in seconds before re-accepting the same marker for
