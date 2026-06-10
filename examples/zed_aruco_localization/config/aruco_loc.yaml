@@ -6,7 +6,7 @@
     ros__parameters:
 
       general:
-        marker_count: 24             # Number of markers in the World
+        marker_count: 25             # Number of markers in the World
         marker_size: 0.762           # Width/Height of the ArUco markers [m]
         maximum_distance: 10.0        # Maximum distance of the target from the camera to consider it valid
         detection_rate: 2.0          # Maximum detection frequency for pose update
@@ -161,6 +161,11 @@
       marker_023:                             # WoodShop racks opposite on pillar
         aruco_id: 32
         position: [125.74,-146.86,2.9]
+        orientation: [0.0,0.0,-1.57]
+
+      marker_024:                             # Pillar A9
+        aruco_id: 35
+        position: [97.89,1.07,2.5]
         orientation: [0.0,0.0,-1.57]
 
 
