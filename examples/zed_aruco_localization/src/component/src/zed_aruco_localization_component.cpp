@@ -660,20 +660,13 @@ void ZedArucoLoc::camera_callback(
   map_pose.mult(marker_world_pose, base_pose_marker);
   // <---- New camera pose
 
-  // ----> Reset camera position
+  // ----> Reset camera position (the ArUco count is published once the camera confirms it)
   resetZedPose(map_pose);
   // <---- Reset camera position
 
   // ----> Update per-marker reset tracking
   _lastResetInfo[sel_id] = {sel_reproj, get_clock()->now()};
   // <---- Update tracking
-
-  // ----> Increment and publish ArUco count
-  _arucoCount++;
-  auto count_msg = std_msgs::msg::UInt32();
-  count_msg.data = _arucoCount;
-  _pubCount->publish(count_msg);
-  // <---- Publish count
 
   // ----> Debug TF
   if (_debugActive) {
@@ -859,6 +852,16 @@ bool ZedArucoLoc::resetZedPose(tf2::Transform & new_pose)
   auto cb = [this](ServiceResponseFuture future) {
       auto result = future.get();
       RCLCPP_INFO(get_logger(), "set_pose response: %s", result->message.c_str());
+      if (!result->success) {
+        return;  // e.g. "Positional tracking not active": the camera is not on the map, so not counted
+      }
+
+      // ----> Increment and publish ArUco count: the camera has applied the new pose
+      _arucoCount++;
+      auto count_msg = std_msgs::msg::UInt32();
+      count_msg.data = _arucoCount;
+      _pubCount->publish(count_msg);
+      // <---- Publish count
     };
 
   _setPoseClient->async_send_request(request, cb);

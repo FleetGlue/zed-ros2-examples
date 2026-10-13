@@ -8,6 +8,8 @@ The launch file `zed_aruco_loc.launch.py` shows how to start a ROS 2 container a
 
 The `stereolabs::ZedArucoLoc` component subscribes to the rectified left camera RGB image topic of the component `stereolabs::ZedCamera`, performs ArUco detection and recalculates the pose of the camera according to the pose of the detected marker in the world. Finally, the `stereolabs::ZedArucoLoc` component calls the `set_pose` service provided by the `stereolabs::ZedCamera` component to fix the pose of the camera.
 
+Each time the camera confirms a new pose (`set_pose` returns success), the component publishes the number of confirmed poses so far on `/zed/aruco/count` (`std_msgs/UInt32`, 0 at start). A refused `set_pose`, for example "Positional tracking not active" at start-up, is not counted, so consumers can use a count above 0 as "the camera is on the map".
+
 You can generate your ArUco markers by using [this online tool](https://chev.me/arucogen/). It is important to select the **6x6** dictionary.
 
 ## Set the parameters
